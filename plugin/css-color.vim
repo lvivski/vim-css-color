@@ -81,18 +81,10 @@ function! s:PreviewCSSColorInLine()
 endfunction
 
 if has("gui_running") || &t_Co==256
-  " HACK modify cssDefinition to add @cssColors to its contains
-  redir => cssdef
-  silent! syn list cssDefinition
-  redir END
-  if len( cssdef )
-    for out in split( cssdef, "\n" )
-      if out !~ '^cssDefinition ' | continue | endif
-      let out = substitute( out, ' \+xxx \+', ' ', '' )
-      let out = substitute( out, ' contains=\zs', '@cssColors,', '' )
-      exe 'syn region' out
-    endfor
-  endif
+  augroup css_colors
+  autocmd Syntax css,sass,scss,stylus silent call s:InitBufferCSSColors()
+  autocmd Syntax     sass,scss,stylus syn cluster sassCssAttributes add=@cssColors
+  augroup END
 
   if ! has('gui_running')
 
@@ -177,6 +169,23 @@ if has("gui_running") || &t_Co==256
     let source = substitute( source, 'gui\([bf]g\)=#''.(', 'cterm\1=''.s:XTermColorForRGB(', 'g' )
     exe source
 
+  endif
+endif
+
+function! s:InitBufferCSSColors()
+  syn list
+
+  " HACK modify cssDefinition to add @cssColors to its contains
+  redir => cssdef
+  silent! syn list cssDefinition
+  redir END
+  if len( cssdef )
+    for out in split( cssdef, "\n" )
+      if out !~ '^cssDefinition ' | continue | endif
+      let out = substitute( out, ' \+xxx \+', ' ', '' )
+      let out = substitute( out, ' contains=\zs', '@cssColors,', '' )
+      exe 'syn region' out
+    endfor
   endif
 
   " w3c Colors
@@ -338,7 +347,8 @@ if has("gui_running") || &t_Co==256
   " this really belongs in Vim's own syntax/css.vim ...
   setlocal iskeyword+=-
 
+  augroup css_colors
   autocmd CursorMoved  * silent call s:PreviewCSSColorInLine()
   autocmd CursorMovedI * silent call s:PreviewCSSColorInLine()
-  autocmd FileType sass,scss,stylus syn cluster sassCssAttributes add=@cssColors
-endif
+  augroup END
+endfunction
